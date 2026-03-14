@@ -18,7 +18,7 @@ jobs:
           fetch-depth: '0' # 需要获取所有的提交历史记录以便计算最新的标签
 
       - name: Bump version and push tag
-        uses: anothrNick/github-tag-action@v1.67.0 # 使用开源且广泛使用的自动打标签组件
+        uses: anothrNick/github-tag-action@1.67.0 # 使用开源且广泛使用的自动打标签组件
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           WITH_V: true          # 创建形如 v1.0.1 而不仅仅是 1.0.1 的标签
