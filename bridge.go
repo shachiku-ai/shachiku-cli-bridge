@@ -164,16 +164,20 @@ func (b *Bridge) Stream(ctx context.Context, req *Request, ch chan<- StreamEvent
 			n, err := ptmx.Read(buf)
 			if n > 0 {
 				chunk := string(buf[:n])
+
+				// The stripansi library regex misses 's' and 'u' commands (save/restore cursor)
+				// It also breaks on '\x1b[<u' (Kitty keyboard protocol disable) because it matches '\x1b[<' and leaves the 'u' behind.
+				chunk = strings.ReplaceAll(chunk, "\x1b[<s", "")
+				chunk = strings.ReplaceAll(chunk, "\x1b[<u", "")
+				chunk = strings.ReplaceAll(chunk, "\x1b[s", "")
+				chunk = strings.ReplaceAll(chunk, "\x1b[u", "")
+
 				cleanChunk := stripansi.Strip(chunk)
 
 				// Strip CLI debug output that gets mixed into the actual message
 				cleanChunk = strings.ReplaceAll(cleanChunk, "Loaded cached credentials.\r\n", "")
 				cleanChunk = strings.ReplaceAll(cleanChunk, "Loaded cached credentials.\n", "")
 				cleanChunk = strings.ReplaceAll(cleanChunk, "Loaded cached credentials.", "")
-
-				// The stripansi library regex misses 's' and 'u' commands (save/restore cursor)
-				cleanChunk = strings.ReplaceAll(cleanChunk, "\x1b[s", "")
-				cleanChunk = strings.ReplaceAll(cleanChunk, "\x1b[u", "")
 
 				if b.Debug {
 					fmt.Printf("CHUNK: %q\n", cleanChunk)
@@ -209,5 +213,17 @@ func (b *Bridge) Execute(ctx context.Context, req *Request) (string, error) {
 		}
 		sb.WriteString(ev.Content)
 	}
-	return sb.String(), nil
+	out := sb.String()
+
+	// Perform a final cleanup pass on the completely assembled output.
+	// This catches any ANSI sequences or cursor controls that were broken across
+	// PTY chunk read boundaries and thus missed by the chunk-level stripper.
+	out = strings.ReplaceAll(out, "\x1b[<s", "")
+	out = strings.ReplaceAll(out, "\x1b[<u", "")
+	out = strings.ReplaceAll(out, "\x1b[s", "")
+	out = strings.ReplaceAll(out, "\x1b[u", "")
+	out = stripansi.Strip(out)
+
+	// Clean trailing newlines
+	return strings.TrimSpace(out), nil
 }
