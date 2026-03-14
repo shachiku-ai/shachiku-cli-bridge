@@ -171,6 +171,10 @@ func (b *Bridge) Stream(ctx context.Context, req *Request, ch chan<- StreamEvent
 				cleanChunk = strings.ReplaceAll(cleanChunk, "Loaded cached credentials.\n", "")
 				cleanChunk = strings.ReplaceAll(cleanChunk, "Loaded cached credentials.", "")
 
+				// The stripansi library regex misses 's' and 'u' commands (save/restore cursor)
+				cleanChunk = strings.ReplaceAll(cleanChunk, "\x1b[s", "")
+				cleanChunk = strings.ReplaceAll(cleanChunk, "\x1b[u", "")
+
 				if b.Debug {
 					fmt.Printf("CHUNK: %q\n", cleanChunk)
 				}
