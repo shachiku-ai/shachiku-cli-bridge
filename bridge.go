@@ -111,9 +111,8 @@ func (b *Bridge) BuildCommand(ctx context.Context, req *Request) (*exec.Cmd, err
 
 	case ProviderClaude:
 		args := []string{}
-		for _, file := range req.Files {
-			// claude code might take file using --file or similar, adjust if known
-			args = append(args, "--file", file)
+		if len(req.Files) > 0 {
+			prompt += "\n\nFiles: " + strings.Join(req.Files, ", ")
 		}
 		args = append(args, "-p", prompt)
 		cmd = exec.CommandContext(ctx, b.ClaudePath, args...)
