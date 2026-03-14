@@ -63,7 +63,7 @@ func TestBuildCommand(t *testing.T) {
 				Files:    []string{"testdata/server.log"},
 				Messages: []Message{{Role: "user", Content: "Summarize this log"}},
 			},
-			wantArgs: []string{"claude", "-p", "Summarize this log\n\nFiles: testdata/server.log"},
+			wantArgs: []string{"claude", "--permission-mode", "bypassPermissions", "-p", "Summarize this log\n\nFiles: testdata/server.log"},
 		},
 		{
 			name: "System Prompt Inclusion",

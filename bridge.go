@@ -110,7 +110,7 @@ func (b *Bridge) BuildCommand(ctx context.Context, req *Request) (*exec.Cmd, err
 		cmd = exec.CommandContext(ctx, b.CodexPath, args...)
 
 	case ProviderClaude:
-		args := []string{}
+		args := []string{"--permission-mode", "bypassPermissions"}
 		if len(req.Files) > 0 {
 			prompt += "\n\nFiles: " + strings.Join(req.Files, ", ")
 		}
