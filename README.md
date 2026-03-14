@@ -6,11 +6,11 @@ This package exposes both synchronous executions and streaming (Server-Sent Even
 
 ## Features
 - **Unified Interface:** Talk to Google Gemini, OpenAI Codex, and Anthropic Claude via the same logical requests.
-- **Image Support:** Pass images seamlessly; they map properly to the respective CLI image parsing flags.
+- **File & System Prompt Support:** Pass system instructions and files seamlessly; they map properly to the respective CLI flags.
 - **SSE Streaming Support:** Features a native built-in `http.Handler` specifically for Server-Sent Events.
 
 ## Supported Providers
-- **gemini:** Uses `--image` for files. Needs to be in `$PATH` or configured.
+- **gemini:** Uses `--include-directories` for files. Needs to be in `$PATH` or configured.
 - **codexcli:** Uses `--image` for files. Needs to be in `$PATH` or configured.
 - **claude:** (Claude Code) Uses `--file` and `-p` for files and prompt respectively. Needs to be in `$PATH` or configured.
 
@@ -32,12 +32,13 @@ func main() {
     b.ClaudePath = "/usr/local/bin/claude" // Configure path if needed
 
     req := &bridge.Request{
-        Provider: bridge.ProviderClaude,
+        Provider:     bridge.ProviderClaude,
+        SystemPrompt: "You are a professional science explainer.",
+        Files:        []string{"/path/to/local_image.png"}, // Automatically attached
         Messages: []bridge.Message{
             {
                 Role:    "user",
                 Content: "Explain quantum computing in one paragraph.",
-                Images:  []string{"/path/to/local_image.png"}, // Automatically attached 
             },
         },
     }
@@ -80,6 +81,8 @@ func main() {
 // Clients send POST /api/chat:
 // {
 //    "provider": "claude",
+//    "system_prompt": "You are a helpful assistant.",
+//    "files": ["/path/to/local_image.png"],
 //    "messages": [
 //        { "role": "user", "content": "Hello!" }
 //    ]

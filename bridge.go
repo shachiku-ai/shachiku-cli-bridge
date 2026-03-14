@@ -25,16 +25,17 @@ const (
 
 // Message represents a chat message
 type Message struct {
-	Role    string   `json:"role"`
-	Content string   `json:"content"`
-	Images  []string `json:"images,omitempty"` // Local paths or URLs if CLI supports it
+	Role    string `json:"role"`
+	Content string `json:"content"`
 }
 
 // Request is the generic request payload
 type Request struct {
-	Provider Provider  `json:"provider"`
-	Messages []Message `json:"messages"`
-	Model    string    `json:"model,omitempty"`
+	Provider     Provider  `json:"provider"`
+	SystemPrompt string    `json:"system_prompt,omitempty"`
+	Messages     []Message `json:"messages"`
+	Files        []string  `json:"files,omitempty"`
+	Model        string    `json:"model,omitempty"`
 }
 
 // Bridge is the main client structure for interacting with the CLIs
@@ -68,13 +69,11 @@ func (b *Bridge) BuildCommand(ctx context.Context, req *Request) (*exec.Cmd, err
 	}
 
 	var prompt string
-	var images []string
 
 	// Seek final user message
 	for i := len(req.Messages) - 1; i >= 0; i-- {
 		if req.Messages[i].Role == "user" {
 			prompt = req.Messages[i].Content
-			images = append(images, req.Messages[i].Images...)
 			break
 		}
 	}
@@ -83,30 +82,34 @@ func (b *Bridge) BuildCommand(ctx context.Context, req *Request) (*exec.Cmd, err
 		return nil, errors.New("no user prompt found across messages")
 	}
 
+	if req.SystemPrompt != "" {
+		prompt = "System: " + req.SystemPrompt + "\n\nUser: " + prompt
+	}
+
 	var cmd *exec.Cmd
 
 	switch req.Provider {
 	case ProviderGemini:
 		args := []string{}
-		for _, img := range images {
-			args = append(args, "--include-directories", filepath.Dir(img))
+		for _, file := range req.Files {
+			args = append(args, "--include-directories", filepath.Dir(file))
 		}
 		args = append(args, "-p", prompt)
 		cmd = exec.CommandContext(ctx, b.GeminiPath, args...)
 
 	case ProviderCodex:
 		args := []string{}
-		for _, img := range images {
-			args = append(args, "--image", img)
+		for _, file := range req.Files {
+			args = append(args, "--image", file)
 		}
 		args = append(args, "exec", "--skip-git-repo-check", prompt)
 		cmd = exec.CommandContext(ctx, b.CodexPath, args...)
 
 	case ProviderClaude:
 		args := []string{}
-		for _, img := range images {
+		for _, file := range req.Files {
 			// claude code might take file using --file or similar, adjust if known
-			args = append(args, "--file", img)
+			args = append(args, "--file", file)
 		}
 		args = append(args, "-p", prompt)
 		cmd = exec.CommandContext(ctx, b.ClaudePath, args...)
@@ -159,10 +162,18 @@ func (b *Bridge) Stream(ctx context.Context, req *Request, ch chan<- StreamEvent
 			if n > 0 {
 				chunk := string(buf[:n])
 				cleanChunk := stripansi.Strip(chunk)
+
+				// Strip CLI debug output that gets mixed into the actual message
+				cleanChunk = strings.ReplaceAll(cleanChunk, "Loaded cached credentials.\r\n", "")
+				cleanChunk = strings.ReplaceAll(cleanChunk, "Loaded cached credentials.\n", "")
+				cleanChunk = strings.ReplaceAll(cleanChunk, "Loaded cached credentials.", "")
+
 				if b.Debug {
 					fmt.Printf("CHUNK: %q\n", cleanChunk)
 				}
-				ch <- StreamEvent{Content: cleanChunk}
+				if cleanChunk != "" {
+					ch <- StreamEvent{Content: cleanChunk}
+				}
 			}
 			if err != nil {
 				if errors.Is(err, io.EOF) || strings.Contains(err.Error(), "input/output error") {

@@ -1,0 +1,25 @@
+name: Auto Tag
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # 给 GITHUB_TOKEN 提供写入权限以创建 tags
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: '0' # 需要获取所有的提交历史记录以便计算最新的标签
+
+      - name: Bump version and push tag
+        uses: anothrNick/github-tag-action@v1.67.0 # 使用开源且广泛使用的自动打标签组件
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WITH_V: true          # 创建形如 v1.0.1 而不仅仅是 1.0.1 的标签
+          DEFAULT_BUMP: patch   # 每次 push 默认递增 patch 号码 (例如 v1.0.0 会变成 v1.0.1)

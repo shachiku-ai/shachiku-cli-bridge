@@ -30,26 +30,29 @@ func TestBuildCommand(t *testing.T) {
 			wantArgs: []string{"gemini", "-p", "Hello"},
 		},
 		{
-			name: "Gemini text and image",
+			name: "Gemini text and file",
 			req: &Request{
 				Provider: ProviderGemini,
-				Messages: []Message{{Role: "user", Content: "Analyze this image", Images: []string{"testdata/test.jpg"}}},
+				Files:    []string{"testdata/test.jpg"},
+				Messages: []Message{{Role: "user", Content: "Analyze this image"}},
 			},
 			wantArgs: []string{"gemini", "--include-directories", "testdata", "-p", "Analyze this image"},
 		},
 		{
-			name: "Gemini text and multiple images",
+			name: "Gemini text and multiple files",
 			req: &Request{
 				Provider: ProviderGemini,
-				Messages: []Message{{Role: "user", Content: "Analyze these", Images: []string{"testdata/img1.png", "testdata/img2.jpg"}}},
+				Files:    []string{"testdata/img1.png", "testdata/img2.jpg"},
+				Messages: []Message{{Role: "user", Content: "Analyze these"}},
 			},
 			wantArgs: []string{"gemini", "--include-directories", "testdata", "--include-directories", "testdata", "-p", "Analyze these"},
 		},
 		{
-			name: "Codex text and image",
+			name: "Codex text and file",
 			req: &Request{
 				Provider: ProviderCodex,
-				Messages: []Message{{Role: "user", Content: "What is this?", Images: []string{"testdata/code.png"}}},
+				Files:    []string{"testdata/code.png"},
+				Messages: []Message{{Role: "user", Content: "What is this?"}},
 			},
 			wantArgs: []string{"codexcli", "--image", "testdata/code.png", "exec", "--skip-git-repo-check", "What is this?"},
 		},
@@ -57,9 +60,19 @@ func TestBuildCommand(t *testing.T) {
 			name: "Claude text and file",
 			req: &Request{
 				Provider: ProviderClaude,
-				Messages: []Message{{Role: "user", Content: "Summarize this log", Images: []string{"testdata/server.log"}}},
+				Files:    []string{"testdata/server.log"},
+				Messages: []Message{{Role: "user", Content: "Summarize this log"}},
 			},
 			wantArgs: []string{"claude", "--file", "testdata/server.log", "-p", "Summarize this log"},
+		},
+		{
+			name: "System Prompt Inclusion",
+			req: &Request{
+				Provider:     ProviderGemini,
+				SystemPrompt: "You are a helpful assistant.",
+				Messages:     []Message{{Role: "user", Content: "Hi"}},
+			},
+			wantArgs: []string{"gemini", "-p", "System: You are a helpful assistant.\n\nUser: Hi"},
 		},
 		{
 			name: "Error no user message",
@@ -145,8 +158,9 @@ func TestExecuteAndStream(t *testing.T) {
 
 	req := &Request{
 		Provider: ProviderGemini,
+		Files:    []string{"mock.jpg"},
 		Messages: []Message{
-			{Role: "user", Content: "Here is to testing streaming", Images: []string{"mock.jpg"}},
+			{Role: "user", Content: "Here is to testing streaming"},
 		},
 	}
 
