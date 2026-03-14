@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/acarl005/stripansi"
@@ -95,7 +96,7 @@ func (b *Bridge) BuildCommand(ctx context.Context, req *Request) (*exec.Cmd, err
 	case ProviderGemini:
 		args := []string{}
 		for _, file := range req.Files {
-			args = append(args, "--image", file)
+			args = append(args, "--include-directories", filepath.Dir(file))
 		}
 		args = append(args, "-p", prompt)
 		cmd = exec.CommandContext(ctx, b.GeminiPath, args...)
