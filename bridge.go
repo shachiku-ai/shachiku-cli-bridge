@@ -7,7 +7,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 
 	"github.com/acarl005/stripansi"
@@ -82,8 +81,12 @@ func (b *Bridge) BuildCommand(ctx context.Context, req *Request) (*exec.Cmd, err
 		return nil, errors.New("no user prompt found across messages")
 	}
 
+	// Clean NUL bytes which cause fork/exec EINVAL in Go
+	prompt = strings.ReplaceAll(prompt, "\x00", "")
+
 	if req.SystemPrompt != "" {
-		prompt = "System: " + req.SystemPrompt + "\n\nUser: " + prompt
+		systemPrompt := strings.ReplaceAll(req.SystemPrompt, "\x00", "")
+		prompt = "System: " + systemPrompt + "\n\nUser: " + prompt
 	}
 
 	var cmd *exec.Cmd
@@ -92,7 +95,7 @@ func (b *Bridge) BuildCommand(ctx context.Context, req *Request) (*exec.Cmd, err
 	case ProviderGemini:
 		args := []string{}
 		for _, file := range req.Files {
-			args = append(args, "--include-directories", filepath.Dir(file))
+			args = append(args, "--image", file)
 		}
 		args = append(args, "-p", prompt)
 		cmd = exec.CommandContext(ctx, b.GeminiPath, args...)

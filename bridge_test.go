@@ -36,7 +36,7 @@ func TestBuildCommand(t *testing.T) {
 				Files:    []string{"testdata/test.jpg"},
 				Messages: []Message{{Role: "user", Content: "Analyze this image"}},
 			},
-			wantArgs: []string{"gemini", "--include-directories", "testdata", "-p", "Analyze this image"},
+			wantArgs: []string{"gemini", "--image", "testdata/test.jpg", "-p", "Analyze this image"},
 		},
 		{
 			name: "Gemini text and multiple files",
@@ -45,7 +45,7 @@ func TestBuildCommand(t *testing.T) {
 				Files:    []string{"testdata/img1.png", "testdata/img2.jpg"},
 				Messages: []Message{{Role: "user", Content: "Analyze these"}},
 			},
-			wantArgs: []string{"gemini", "--include-directories", "testdata", "--include-directories", "testdata", "-p", "Analyze these"},
+			wantArgs: []string{"gemini", "--image", "testdata/img1.png", "--image", "testdata/img2.jpg", "-p", "Analyze these"},
 		},
 		{
 			name: "Codex text and file",
@@ -178,7 +178,7 @@ func TestExecuteAndStream(t *testing.T) {
 			t.Errorf("Missing expected colored text stream. Output: %s", out)
 		}
 
-		wantArgs := "Received args: --include-directories . -p Here is to testing streaming"
+		wantArgs := "Received args: --image mock.jpg -p Here is to testing streaming"
 		if !strings.Contains(out, wantArgs) {
 			t.Errorf("Missing proper argument pass-down.\nGot: %s", out)
 		}
