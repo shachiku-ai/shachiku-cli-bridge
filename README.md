@@ -1,6 +1,6 @@
 # shachiku-cli-bridge
 
-A unified Go bridge for executing AI command-line tools including `gemini`, `codexcli`, and `claude`.
+A unified Go bridge for executing AI command-line tools including `gemini`, `codex`, and `claude`.
 
 This package exposes both synchronous executions and streaming (Server-Sent Events) executions. It wraps around CLI programs using a pseudo-terminal (PTY) to ensure raw, unbroken text streams without buffering issues typically seen in Standard pipes.
 
@@ -11,7 +11,7 @@ This package exposes both synchronous executions and streaming (Server-Sent Even
 
 ## Supported Providers
 - **gemini:** Uses `--include-directories` for files. Needs to be in `$PATH` or configured.
-- **codexcli:** Uses `--image` for files. Needs to be in `$PATH` or configured.
+- **codex:** Uses `--image` for files. Needs to be in `$PATH` or configured.
 - **claude:** (Claude Code) Uses `--file` and `-p` for files and prompt respectively. Needs to be in `$PATH` or configured.
 
 ## Usage

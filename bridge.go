@@ -50,7 +50,7 @@ type Bridge struct {
 func NewBridge() *Bridge {
 	return &Bridge{
 		GeminiPath: "gemini",
-		CodexPath:  "codexcli",
+		CodexPath:  "codex",
 		ClaudePath: "claude",
 	}
 }
@@ -102,12 +102,13 @@ func (b *Bridge) BuildCommand(ctx context.Context, req *Request) (*exec.Cmd, err
 		cmd = exec.CommandContext(ctx, b.GeminiPath, args...)
 
 	case ProviderCodex:
-		args := []string{}
+		args := []string{"exec", "--skip-git-repo-check"}
 		for _, file := range req.Files {
 			args = append(args, "--image", file)
 		}
-		args = append(args, "exec", "--skip-git-repo-check", prompt)
+		args = append(args, "-")
 		cmd = exec.CommandContext(ctx, b.CodexPath, args...)
+		cmd.Stdin = strings.NewReader(prompt)
 
 	case ProviderClaude:
 		args := []string{"--permission-mode", "bypassPermissions"}
@@ -140,13 +141,36 @@ func (b *Bridge) Stream(ctx context.Context, req *Request, ch chan<- StreamEvent
 		fmt.Printf("Executing command: %s %s\n", cmd.Path, strings.Join(cmd.Args, " "))
 	}
 
-	// Start under PTY to ensure CLI unflushed outputs aren't buffered in a pipe
-	ptmx, err := pty.Start(cmd)
-	if err != nil {
-		ch <- StreamEvent{Error: fmt.Errorf("failed to start pty: %v", err)}
-		return
+	var ptmx *os.File
+
+	if cmd.Stdin != nil {
+		// Manual PTY open to preserve pre-configured Stdin (e.g. for Codex pipe)
+		var tty *os.File
+		ptmx, tty, err = pty.Open()
+		if err != nil {
+			ch <- StreamEvent{Error: fmt.Errorf("failed to open pty: %v", err)}
+			return
+		}
+		defer ptmx.Close()
+
+		cmd.Stdout = tty
+		cmd.Stderr = tty
+
+		if err = cmd.Start(); err != nil {
+			tty.Close()
+			ch <- StreamEvent{Error: fmt.Errorf("failed to start command: %v", err)}
+			return
+		}
+		tty.Close() // Close child fd in parent to get EOF
+	} else {
+		// Standard Start under PTY (fully assigns tty to stdin/out/err)
+		ptmx, err = pty.Start(cmd)
+		if err != nil {
+			ch <- StreamEvent{Error: fmt.Errorf("failed to start pty: %v", err)}
+			return
+		}
+		defer ptmx.Close()
 	}
-	defer ptmx.Close()
 
 	// Wait and cleanup routine
 	go func() {

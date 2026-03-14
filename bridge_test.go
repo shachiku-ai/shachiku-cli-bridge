@@ -12,7 +12,7 @@ import (
 func TestBuildCommand(t *testing.T) {
 	b := NewBridge()
 	b.GeminiPath = "gemini"
-	b.CodexPath = "codexcli"
+	b.CodexPath = "codex"
 	b.ClaudePath = "claude"
 
 	tests := []struct {
@@ -54,7 +54,7 @@ func TestBuildCommand(t *testing.T) {
 				Files:    []string{"testdata/code.png"},
 				Messages: []Message{{Role: "user", Content: "What is this?"}},
 			},
-			wantArgs: []string{"codexcli", "--image", "testdata/code.png", "exec", "--skip-git-repo-check", "What is this?"},
+			wantArgs: []string{"codex", "exec", "--skip-git-repo-check", "--image", "testdata/code.png", "-"},
 		},
 		{
 			name: "Claude text and file",
